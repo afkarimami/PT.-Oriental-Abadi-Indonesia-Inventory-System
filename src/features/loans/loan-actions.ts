@@ -34,10 +34,10 @@ export async function createLoan(input: CreateLoanValues): Promise<ActionResult>
     p_documentation_path: parsed.data.documentationPath ?? "",
     p_items: parsed.data.items.map((item) => ({ inventory_item_id: item.inventoryItemId, quantity: item.quantity })),
   });
-  if (error) return { success: false, message: error.message.includes("Stok") ? error.message : "Peminjaman gagal dicatat. Periksa kembali data dan stok alat." };
+  if (error) return { success: false, message: error.message.includes("Stok") ? error.message : "Peminjaman gagal dicatat. Periksa kembali data dan stok barang." };
 
   refresh(data);
-  return { success: true, message: "Peminjaman berhasil dicatat dan stok alat diperbarui.", loanId: data };
+  return { success: true, message: "Peminjaman berhasil dicatat dan stok barang diperbarui.", loanId: data };
 }
 
 export async function returnLoanItem(input: ReturnLoanItemValues, loanId: string): Promise<ActionResult> {

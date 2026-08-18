@@ -29,7 +29,6 @@ export async function getLoanableItems(): Promise<LoanableItem[]> {
     .from("inventory_items")
     .select("id, code, name, current_quantity, racks(code)")
     .eq("is_active", true)
-    .eq("item_type", "inventory")
     .gt("current_quantity", 0)
     .order("name")
     .limit(1000);

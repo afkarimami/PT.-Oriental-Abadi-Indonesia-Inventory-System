@@ -13,7 +13,7 @@ export const createLoanSchema = z.object({
   items: z.array(z.object({
     inventoryItemId: z.string().uuid(),
     quantity: z.number().int().positive(),
-  })).min(1, "Pilih minimal satu alat."),
+  })).min(1, "Pilih minimal satu barang."),
 });
 
 export const returnLoanItemSchema = z.object({
