@@ -49,7 +49,7 @@ export function LoanList({ loans, items, attentionMode = false }: LoanListProps)
             updateParams({ search: new FormData(event.currentTarget).get("search")?.toString() ?? "" });
           }}
         >
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input name="search" defaultValue={searchParams.get("search") ?? ""} className="h-10 rounded-xl pl-9" placeholder="Cari peminjam, keperluan, atau kode transaksi" />
         </form>
         <Button type="button" className="rounded-xl" onClick={() => setIsOpen(true)}>
@@ -183,7 +183,7 @@ function LoanForm({ items, onSuccess }: { items: LoanableItem[]; onSuccess: (loa
         </div>
       </Field>
 
-      {/* Bagian Item Peminjaman dengan Tombol + dan - */}
+      {/* Bagian Item Peminjaman dengan Input yang Sudah Diperbaiki */}
       <div className="grid gap-2">
         {loanItems.length === 0 ? (
           <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Belum ada barang dipilih. Gunakan pencarian di atas.</p>
@@ -219,39 +219,40 @@ function LoanForm({ items, onSuccess }: { items: LoanableItem[]; onSuccess: (loa
                   >
                     -
                   </Button>
+                  
+                  {/* Input Angka Diperbaiki: type="text" & inputMode="numeric" */}
                   <input
-  type="number"
-  min="1"
-  max={item.availableQuantity}
-  value={row.quantity === 0 ? "" : row.quantity}
-  onChange={(event) => {
-    const val = event.target.value;
-    setLoanItems((current) =>
-      current.map((selected) =>
-        selected.inventoryItemId === row.inventoryItemId
-          ? {
-              ...selected,
-              // Izinkan 0 (kosong) saat mengetik, batasi maksimum sesuai ketersediaan
-              quantity: val === "" ? 0 : Math.min(item.availableQuantity, Math.max(0, Number(val))),
-            }
-          : selected
-      )
-    );
-  }}
-  onBlur={() => {
-    // Jika input ditinggalkan dalam keadaan kosong/0, kembalikan otomatis ke angka 1
-    if (!row.quantity || row.quantity < 1) {
-      setLoanItems((current) =>
-        current.map((selected) =>
-          selected.inventoryItemId === row.inventoryItemId
-            ? { ...selected, quantity: 1 }
-            : selected
-        )
-      );
-    }
-  }}
-  className="w-8 text-center text-sm font-semibold focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-/>
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={row.quantity === 0 ? "" : String(row.quantity)}
+                    onChange={(event) => {
+                      const rawVal = event.target.value.replace(/[^0-9]/g, "");
+                      const cleanVal = rawVal.replace(/^0+/, "");
+                      const numVal = cleanVal === "" ? 0 : Math.min(item.availableQuantity, Number(cleanVal));
+
+                      setLoanItems((current) =>
+                        current.map((selected) =>
+                          selected.inventoryItemId === row.inventoryItemId
+                            ? { ...selected, quantity: numVal }
+                            : selected
+                        )
+                      );
+                    }}
+                    onBlur={() => {
+                      if (!row.quantity || row.quantity < 1) {
+                        setLoanItems((current) =>
+                          current.map((selected) =>
+                            selected.inventoryItemId === row.inventoryItemId
+                              ? { ...selected, quantity: 1 }
+                              : selected
+                          )
+                        );
+                      }
+                    }}
+                    className="w-10 text-center text-sm font-semibold focus:outline-none"
+                  />
+
                   <Button
                     type="button"
                     variant="ghost"
