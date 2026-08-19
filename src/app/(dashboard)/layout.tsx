@@ -10,4 +10,4 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   }
   if (!admin.isActive) redirect("/login?error=inactive");
   return <DashboardShell admin={admin}>{children}</DashboardShell>;
-}
+}
