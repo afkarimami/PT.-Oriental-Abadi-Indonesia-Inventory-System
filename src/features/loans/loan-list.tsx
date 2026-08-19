@@ -220,25 +220,38 @@ function LoanForm({ items, onSuccess }: { items: LoanableItem[]; onSuccess: (loa
                     -
                   </Button>
                   <input
-                    type="number"
-                    min="1"
-                    max={item.availableQuantity}
-                    value={row.quantity}
-                    onChange={(event) => {
-                      const val = event.target.value;
-                      setLoanItems((current) =>
-                        current.map((selected) =>
-                          selected.inventoryItemId === row.inventoryItemId
-                            ? {
-                                ...selected,
-                                quantity: val === "" ? 1 : Math.min(item.availableQuantity, Math.max(1, Number(val))),
-                              }
-                            : selected
-                        )
-                      );
-                    }}
-                    className="w-8 text-center text-sm font-semibold focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  />
+  type="number"
+  min="1"
+  max={item.availableQuantity}
+  value={row.quantity === 0 ? "" : row.quantity}
+  onChange={(event) => {
+    const val = event.target.value;
+    setLoanItems((current) =>
+      current.map((selected) =>
+        selected.inventoryItemId === row.inventoryItemId
+          ? {
+              ...selected,
+              // Izinkan 0 (kosong) saat mengetik, batasi maksimum sesuai ketersediaan
+              quantity: val === "" ? 0 : Math.min(item.availableQuantity, Math.max(0, Number(val))),
+            }
+          : selected
+      )
+    );
+  }}
+  onBlur={() => {
+    // Jika input ditinggalkan dalam keadaan kosong/0, kembalikan otomatis ke angka 1
+    if (!row.quantity || row.quantity < 1) {
+      setLoanItems((current) =>
+        current.map((selected) =>
+          selected.inventoryItemId === row.inventoryItemId
+            ? { ...selected, quantity: 1 }
+            : selected
+        )
+      );
+    }
+  }}
+  className="w-8 text-center text-sm font-semibold focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+/>
                   <Button
                     type="button"
                     variant="ghost"
