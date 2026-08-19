@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
 import { logout } from "@/features/auth/auth-actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client"; // Pastikan path Supabase Client Anda tepat
+import { createClient } from "@/lib/supabase/client";
 import type { AdminSummary } from "@/types";
 
 const roleLabels: Record<AdminSummary["role"], string> = {
@@ -14,16 +15,55 @@ const roleLabels: Record<AdminSummary["role"], string> = {
   viewer: "Viewer",
 };
 
+// Mapping URL ke Judul & Subjudul
+const pageTitles: Record<string, { title: string; subtitle: string }> = {
+  "/": {
+    subtitle: "Selamat datang kembali",
+    title: "Dashboard inventaris",
+  },
+  "/inventory": {
+    subtitle: "Kelola Stok & Susunan Barang",
+    title: "Daftar inventaris",
+  },
+  "/loans": {
+    subtitle: "Kelola Transaksi Peminjaman",
+    title: "Transaksi alat",
+  },
+  "/reports": {
+    subtitle: "Rekap & Ringkasan Data",
+    title: "Laporan inventaris",
+  },
+  "/racks": {
+    subtitle: "Kelola Lokasi Penyimpanan",
+    title: "Daftar rak",
+  },
+  "/users": {
+    subtitle: "Kelola Hak Akses Pengguna",
+    title: "Manajemen pengguna",
+  },
+};
+
 function getInitials(name: string) {
   return name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "AD";
 }
 
 export function AppHeader({ admin, onOpenNavigation }: { admin: AdminSummary; onOpenNavigation: () => void }) {
+  const pathname = usePathname();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
 
   const supabase = createClient();
+
+  // Menentukan judul header berdasarkan URL aktif (jika halaman detail seperti /loans/123, gunakan wildcard/fallback)
+  const matchedPath = Object.keys(pageTitles).find((path) => 
+    path === "/" ? pathname === "/" : pathname.startsWith(path)
+  );
+
+  const currentPage = matchedPath ? pageTitles[matchedPath] : {
+    subtitle: "Ruang Inventaris",
+    title: "Dashboard",
+  };
 
   // Ambil data dari tabel notifications saat menu lonceng dibuka
   useEffect(() => {
@@ -46,9 +86,11 @@ export function AppHeader({ admin, onOpenNavigation }: { admin: AdminSummary; on
           <Menu className="size-5" />
           <span className="sr-only">Buka navigasi</span>
         </Button>
+        
+        {/* Bagian Judul Dinamis */}
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-muted-foreground">Selamat datang kembali</p>
-          <h1 className="truncate text-lg font-bold sm:text-xl">Dashboard inventaris</h1>
+          <p className="text-xs font-medium text-muted-foreground">{currentPage.subtitle}</p>
+          <h1 className="truncate text-lg font-bold sm:text-xl">{currentPage.title}</h1>
         </div>
 
         {/* Lonceng Notifikasi */}

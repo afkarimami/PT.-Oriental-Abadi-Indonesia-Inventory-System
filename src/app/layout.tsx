@@ -6,6 +6,7 @@ import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Ruang Inventaris",
   description: "Workspace inventaris kantor yang rapi dan mudah digunakan.",
