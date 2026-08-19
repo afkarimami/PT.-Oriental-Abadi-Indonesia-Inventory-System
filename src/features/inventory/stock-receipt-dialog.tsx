@@ -32,7 +32,11 @@ export function StockReceiptDialog({ items, racks }: { items: InventorySearchIte
   const [rackId, setRackId] = useState("");
   const [itemType, setItemType] = useState<"inventory" | "consumable">("inventory");
   const [pending, setPending] = useState(false);
-  const results = useMemo(() => search.trim() ? items.filter((item) => (item.name + " " + item.code + " " + item.rackCode).toLowerCase().includes(search.toLowerCase())).slice(0, 7) : [], [items, search]);
+
+  const results = useMemo(
+    () => (search.trim() ? items.filter((item) => (item.name + " " + item.code + " " + item.rackCode).toLowerCase().includes(search.toLowerCase())).slice(0, 7) : []),
+    [items, search]
+  );
 
   const reset = () => {
     setMode("existing");
@@ -53,7 +57,16 @@ export function StockReceiptDialog({ items, racks }: { items: InventorySearchIte
       return toast.error("Jumlah harus minimal 1.");
     }
     setPending(true);
-    const result = await receiveStock({ mode, existingItemId: selectedItem?.id, rackId: rackId || undefined, name: name || undefined, code: code || undefined, itemType, quantity: parsedQuantity, notes: notes || undefined });
+    const result = await receiveStock({
+      mode,
+      existingItemId: selectedItem?.id,
+      rackId: rackId || undefined,
+      name: name || undefined,
+      code: code || undefined,
+      itemType,
+      quantity: parsedQuantity,
+      notes: notes || undefined,
+    });
     setPending(false);
     if (!result.success) return toast.error(result.message);
     toast.success(result.message);
@@ -81,18 +94,22 @@ export function StockReceiptDialog({ items, racks }: { items: InventorySearchIte
                   <Input value={search} onChange={(event) => { setSearch(event.target.value); setSelectedItem(null); }} className="pl-9" placeholder="Ketik nama atau kode barang" autoComplete="off" />
                   {search && (
                     <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border bg-popover shadow-lg">
-                      {results.length === 0 ? <p className="px-3 py-3 text-sm text-muted-foreground">Barang tidak ditemukan.</p> : results.map((item) => (
-                        <button key={item.id} type="button" onClick={() => { setSelectedItem(item); setSearch(""); }} className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left hover:bg-muted">
-                          <span>
-                            <span className="block text-sm font-semibold">{item.name}</span>
-                            <span className="block font-mono text-xs text-muted-foreground">{item.code} - Rak {item.rackCode}</span>
-                          </span>
-                          <span className="text-right text-xs text-muted-foreground">
-                            <span className="block">{itemTypeLabels[item.itemType]}</span>
-                            <span>Stok {item.currentQuantity ?? "-"}</span>
-                          </span>
-                        </button>
-                      ))}
+                      {results.length === 0 ? (
+                        <p className="px-3 py-3 text-sm text-muted-foreground">Barang tidak ditemukan.</p>
+                      ) : (
+                        results.map((item) => (
+                          <button key={item.id} type="button" onClick={() => { setSelectedItem(item); setSearch(""); }} className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left hover:bg-muted">
+                            <span>
+                              <span className="block text-sm font-semibold">{item.name}</span>
+                              <span className="block font-mono text-xs text-muted-foreground">{item.code} - Rak {item.rackCode}</span>
+                            </span>
+                            <span className="text-right text-xs text-muted-foreground">
+                              <span className="block">{itemTypeLabels[item.itemType]}</span>
+                              <span>Stok {item.currentQuantity ?? "-"}</span>
+                            </span>
+                          </button>
+                        ))
+                      )}
                     </div>
                   )}
                 </div>
@@ -121,25 +138,24 @@ export function StockReceiptDialog({ items, racks }: { items: InventorySearchIte
             </>
           )}
 
-          {/* Bagian Input Jumlah yang Sudah Diperbaiki */}
+          {/* PERBAIKAN UTAMA: Menggunakan type="text" & inputMode="numeric" */}
           <Field label={mode === "new" ? "Stok awal" : "Jumlah masuk"}>
             <Input
-              type="number"
-              min="1"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={quantity}
               onChange={(event) => {
-                const val = event.target.value;
-                if (val.length > 1 && val.startsWith("0")) {
-                  setQuantity(val.replace(/^0+/, ""));
-                } else {
-                  setQuantity(val);
-                }
+                const rawVal = event.target.value.replace(/[^0-9]/g, "");
+                const cleanVal = rawVal.replace(/^0+/, "");
+                setQuantity(cleanVal);
               }}
               onBlur={() => {
                 if (!quantity || Number(quantity) < 1) {
                   setQuantity("1");
                 }
               }}
+              placeholder="1"
               required
             />
           </Field>
