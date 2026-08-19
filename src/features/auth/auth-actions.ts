@@ -17,7 +17,11 @@ export async function login(_: AuthActionState, formData: FormData): Promise<Aut
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return { error: "Email atau password tidak valid. Silakan coba lagi." };
+
+  if (error) {
+    console.log("=== ERROR SUPABASE AUTH ASLI ===", error);
+    return { error: `[DETAIL ERROR]: ${error.message}` };
+  }
 
   redirect("/");
 }
@@ -27,6 +31,7 @@ export async function logout() {
   await supabase.auth.signOut();
   redirect("/login");
 }
+
 export async function activateInvitedAccount(): Promise<AuthActionState> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
