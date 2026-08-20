@@ -35,7 +35,7 @@ export function AppSidebar({ admin, compact = false, onNavigate }: AppSidebarPro
           })}
         </div>
       </nav>
-      <div className="m-3 rounded-2xl bg-[#f5f7ff] p-4"><p className="text-sm font-semibold text-[#3547b9]">Inventaris kantor</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Pilih rak untuk melihat susunan dan stok barang.</p></div>
+      {/* <div className="m-3 rounded-2xl bg-[#f5f7ff] p-4"><p className="text-sm font-semibold text-[#3547b9]">Inventaris kantor</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Pilih rak untuk melihat susunan dan stok barang.</p></div> */}
     </aside>
   );
 }
