@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { InventoryItem, InventoryPagination, InventoryParams, InventoryRackDetail, InventoryRackSummary, InventorySearchItem, InventoryStockExportItem } from "./inventory-types";
+import { unstable_noStore as noStore } from "next/cache";
 
 function getPagination(params: InventoryParams) {
   const pageSize = [10, 25, 50].includes(Number(params.pageSize)) ? Number(params.pageSize) : 12;
@@ -8,6 +9,7 @@ function getPagination(params: InventoryParams) {
 }
 
 export async function getInventoryItems(params: InventoryParams): Promise<{ records: InventoryItem[]; pagination: InventoryPagination }> {
+  noStore();
   const supabase = await createClient();
   const { page, pageSize } = getPagination(params);
   let query = supabase

@@ -7,8 +7,9 @@ import { createLoanSchema, returnLoanItemSchema, type CreateLoanValues, type Ret
 
 type ActionResult = { success: boolean; message: string; loanId?: string };
 
+// Memperbarui cache halaman global, inventory, dan detail peminjaman
 function refresh(loanId?: string) {
-  ["/", "/inventory", "/loans"].forEach((path) => revalidatePath(path));
+  ["/", "/inventory", "/loans"].forEach((path) => revalidatePath(path, "layout"));
   if (loanId) revalidatePath("/loans/" + loanId);
 }
 
@@ -20,6 +21,7 @@ async function canMutate(): Promise<ActionResult | null> {
 export async function createLoan(input: CreateLoanValues): Promise<ActionResult> {
   const permission = await canMutate();
   if (permission) return permission;
+  
   const parsed = createLoanSchema.safeParse(input);
   if (!parsed.success) return { success: false, message: parsed.error.issues[0]?.message ?? "Data peminjaman tidak valid." };
 
@@ -34,6 +36,7 @@ export async function createLoan(input: CreateLoanValues): Promise<ActionResult>
     p_documentation_path: parsed.data.documentationPath ?? "",
     p_items: parsed.data.items.map((item) => ({ inventory_item_id: item.inventoryItemId, quantity: item.quantity })),
   });
+  
   if (error) return { success: false, message: error.message.includes("Stok") ? error.message : "Peminjaman gagal dicatat. Periksa kembali data dan stok barang." };
 
   refresh(data);
@@ -43,6 +46,7 @@ export async function createLoan(input: CreateLoanValues): Promise<ActionResult>
 export async function returnLoanItem(input: ReturnLoanItemValues, loanId: string): Promise<ActionResult> {
   const permission = await canMutate();
   if (permission) return permission;
+  
   const parsed = returnLoanItemSchema.safeParse(input);
   if (!parsed.success) return { success: false, message: parsed.error.issues[0]?.message ?? "Data pengembalian tidak valid." };
 
@@ -55,8 +59,8 @@ export async function returnLoanItem(input: ReturnLoanItemValues, loanId: string
     p_notes: parsed.data.notes ?? "",
     p_documentation_path: parsed.data.documentationPath ?? "",
   });
-  if (error) return { success: false, message: error.message.includes("Jumlah") ? error.message : "Pengembalian gagal dicatat." };
-
+  
+if (error) return { success: false, message: error.message };
   refresh(loanId);
   return { success: true, message: "Pengembalian selesai dan stok tersedia telah diperbarui." };
 }
