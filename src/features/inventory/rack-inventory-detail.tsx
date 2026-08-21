@@ -77,8 +77,25 @@ export function RackInventoryDetail({ rack, records, pagination }: RackInventory
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {records.map((record) => (
               <article key={record.id} className="rounded-2xl border bg-card p-5 shadow-[0_8px_24px_rgba(28,36,52,0.04)]">
-                <div className="flex items-start justify-between gap-3"><div><p className="font-mono text-xs font-semibold text-primary">{record.code}</p><h3 className="mt-2 text-base font-bold">{record.name}</h3><p className="mt-1 text-xs text-muted-foreground">{itemTypeLabel[record.itemType]}</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${record.currentQuantity === null ? "bg-muted text-muted-foreground" : "bg-emerald-50 text-emerald-800"}`}>{record.currentQuantity === null ? "Belum ditentukan" : "Tercatat"}</span></div>
-                <div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-muted/60 p-3"><p className="text-xs text-muted-foreground">Kuantitas saat ini</p><p className="mt-1 text-xl font-bold">{quantity(record.currentQuantity)}</p></div><div className="rounded-xl bg-muted/60 p-3"><p className="text-xs text-muted-foreground">Stok awal</p><p className="mt-1 text-xl font-bold">{quantity(record.initialQuantity)}</p></div></div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-xs font-semibold text-primary">{record.code}</p>
+                    <h3 className="mt-2 text-base font-bold">{record.name}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">{itemTypeLabel[record.itemType]}</p>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${record.currentQuantity === null ? "bg-muted text-muted-foreground" : "bg-emerald-50 text-emerald-800"}`}>
+                    {record.currentQuantity === null ? "Belum ditentukan" : "Tercatat"}
+                  </span>
+                </div>
+
+                {/* Perubahan: Hanya menampilkan box Stok */}
+                <div className="mt-5">
+                  <div className="rounded-xl bg-muted/60 p-3">
+                    <p className="text-xs text-muted-foreground">Stok</p>
+                    <p className="mt-1 text-xl font-bold">{quantity(record.currentQuantity)}</p>
+                  </div>
+                </div>
+
                 {(record.usedQuantity !== null || record.addedQuantity !== null) && <p className="mt-3 text-xs text-muted-foreground">Pakai: {quantity(record.usedQuantity)} - Tambah: {quantity(record.addedQuantity)}</p>}
                 <div className="mt-4 flex items-center gap-2 border-t pt-3 text-xs text-muted-foreground"><Package className="size-3.5" />Rak {record.rack.code}</div>
               </article>

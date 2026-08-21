@@ -1,9 +1,11 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { LoanAttentionStatus, LoanDetail, LoanDetailItem, LoanListRecord, LoanParams, LoanReturnRecord, LoanableItem, LoanStatus, OutstandingLoanItem } from "./loan-types";
 
 function getLoanStatus(status: string, expectedReturnOn: string | null): LoanStatus {
+  if (status === "closed" || status === "returned") return "closed";
   if (status === "active" && expectedReturnOn && expectedReturnOn < new Date().toISOString().slice(0, 10)) return "overdue";
-  return status === "closed" ? "closed" : "active";
+  return "active";
 }
 
 function getLoanAttentionStatus(expectedReturnOn: string | null): LoanAttentionStatus | null {
@@ -16,6 +18,7 @@ function getLoanAttentionStatus(expectedReturnOn: string | null): LoanAttentionS
   if (expectedReturnOn <= dueSoonDate) return "due_soon";
   return null;
 }
+
 async function getDocumentationUrl(path: string | null) {
   if (!path) return null;
   const supabase = await createClient();
@@ -24,6 +27,7 @@ async function getDocumentationUrl(path: string | null) {
 }
 
 export async function getLoanableItems(): Promise<LoanableItem[]> {
+  noStore();
   const supabase = await createClient();
   const { data } = await supabase
     .from("inventory_items")
@@ -40,6 +44,7 @@ export async function getLoanableItems(): Promise<LoanableItem[]> {
 }
 
 export async function getLoans(params: LoanParams): Promise<LoanListRecord[]> {
+  noStore();
   const supabase = await createClient();
   let query = supabase
     .from("loans")
@@ -49,8 +54,10 @@ export async function getLoans(params: LoanParams): Promise<LoanListRecord[]> {
 
   const search = params.search?.trim().replace(/[,%()]/g, " ");
   if (search) query = query.or("code.ilike.%" + search + "%,borrower_name.ilike.%" + search + "%,borrower_phone.ilike.%" + search + "%,purpose.ilike.%" + search + "%");
+  
+  // Filter status transaksi agar transaksi yang 'returned' atau 'closed' otomatis tersembunyi dari tab 'active'
   if (params.status === "active") query = query.eq("status", "active");
-  if (params.status === "closed") query = query.eq("status", "closed");
+  if (params.status === "closed") query = query.in("status", ["closed", "returned"]);
 
   const { data } = await query;
   return (data ?? []).map((loan) => {
@@ -59,29 +66,52 @@ export async function getLoans(params: LoanParams): Promise<LoanListRecord[]> {
     const attentionStatus = getLoanAttentionStatus(loan.expected_return_on);
     if (params.status === "overdue" && status !== "overdue") return null;
     if (params.view === "attention" && !attentionStatus) return null;
-    const outstandingQuantity = items.reduce((total, item) => total + item.quantity_borrowed - item.quantity_returned - item.quantity_damaged - item.quantity_lost, 0);
+    const outstandingQuantity = items.reduce((total, item) => total + (item.quantity_borrowed ?? 0) - (item.quantity_returned ?? 0) - (item.quantity_damaged ?? 0) - (item.quantity_lost ?? 0), 0);
     return { id: loan.id, code: loan.code, borrowerName: loan.borrower_name, borrowerPhone: loan.borrower_phone, purpose: loan.purpose, loanedAt: loan.loaned_at, expectedReturnOn: loan.expected_return_on, closedAt: loan.closed_at, status, attentionStatus, itemCount: items.length, outstandingQuantity };
   }).filter((loan): loan is LoanListRecord => loan !== null);
 }
 
-
 export async function getOutstandingLoanItems(): Promise<OutstandingLoanItem[]> {
+  noStore(); // Mematikan cache agar data selalu realtime
   const supabase = await createClient();
+  
   const { data } = await supabase
     .from("loan_items")
     .select("id, loan_id, quantity_borrowed, quantity_returned, quantity_damaged, quantity_lost, inventory_items(code, name, racks(code)), loans!inner(id, code, borrower_name, borrower_phone, purpose, expected_return_on, status)")
-    .eq("loans.status", "active");
+    .eq("loans.status", "active"); // HANYA AMBIL TRANSAKSI YANG HAKIKATNYA MASIH AKTIF
 
-  return (data ?? []).map((item) => {
-    const loan = Array.isArray(item.loans) ? item.loans[0] ?? null : item.loans;
-    const inventoryItem = Array.isArray(item.inventory_items) ? item.inventory_items[0] ?? null : item.inventory_items;
-    const rack = inventoryItem && (Array.isArray(inventoryItem.racks) ? inventoryItem.racks[0] ?? null : inventoryItem.racks);
-    const outstandingQuantity = item.quantity_borrowed - item.quantity_returned - item.quantity_damaged - item.quantity_lost;
-    if (!loan || !inventoryItem || outstandingQuantity <= 0) return null;
-    return { id: item.id, loanId: loan.id, loanCode: loan.code, itemName: inventoryItem.name, itemCode: inventoryItem.code, rackCode: rack?.code ?? "-", outstandingQuantity, borrowerName: loan.borrower_name, borrowerPhone: loan.borrower_phone, purpose: loan.purpose, expectedReturnOn: loan.expected_return_on };
-  }).filter((item): item is OutstandingLoanItem => item !== null);
+  return (data ?? [])
+    .map((item) => {
+      const loan = Array.isArray(item.loans) ? item.loans[0] ?? null : item.loans;
+      const inventoryItem = Array.isArray(item.inventory_items) ? item.inventory_items[0] ?? null : item.inventory_items;
+      const rack = inventoryItem && (Array.isArray(inventoryItem.racks) ? inventoryItem.racks[0] ?? null : inventoryItem.racks);
+      
+      // Hitung sisa barang
+      const outstandingQuantity = (item.quantity_borrowed ?? 0) - (item.quantity_returned ?? 0) - (item.quantity_damaged ?? 0) - (item.quantity_lost ?? 0);
+      
+      // HAPUS DARI DAFTAR jika transaksi tidak aktif atau sisa barang sudah 0/habis
+      if (!loan || loan.status !== "active" || !inventoryItem || outstandingQuantity <= 0) {
+        return null;
+      }
+      
+      return { 
+        id: item.id, 
+        loanId: loan.id, 
+        loanCode: loan.code, 
+        itemName: inventoryItem.name, 
+        itemCode: inventoryItem.code, 
+        rackCode: rack?.code ?? "-", 
+        outstandingQuantity, 
+        borrowerName: loan.borrower_name, 
+        borrowerPhone: loan.borrower_phone, 
+        purpose: loan.purpose, 
+        expectedReturnOn: loan.expected_return_on 
+      };
+    })
+    .filter((item): item is OutstandingLoanItem => item !== null);
 }
 export async function getLoanDetail(loanId: string): Promise<LoanDetail | null> {
+  noStore();
   const supabase = await createClient();
   const { data: loan } = await supabase
     .from("loans")
@@ -105,7 +135,7 @@ export async function getLoanDetail(loanId: string): Promise<LoanDetail | null> 
       documentationUrl: await getDocumentationUrl(entry.documentation_path),
       createdAt: entry.created_at,
     })));
-    return { id: item.id, itemCode: inventoryItem.code, itemName: inventoryItem.name, rackCode: rack?.code ?? "-", quantityBorrowed: item.quantity_borrowed, quantityReturned: item.quantity_returned, quantityDamaged: item.quantity_damaged, quantityLost: item.quantity_lost, outstandingQuantity: item.quantity_borrowed - item.quantity_returned - item.quantity_damaged - item.quantity_lost, returns: returnRecords };
+    return { id: item.id, itemCode: inventoryItem.code, itemName: inventoryItem.name, rackCode: rack?.code ?? "-", quantityBorrowed: item.quantity_borrowed, quantityReturned: item.quantity_returned ?? 0, quantityDamaged: item.quantity_damaged ?? 0, quantityLost: item.quantity_lost ?? 0, outstandingQuantity: (item.quantity_borrowed ?? 0) - (item.quantity_returned ?? 0) - (item.quantity_damaged ?? 0) - (item.quantity_lost ?? 0), returns: returnRecords };
   }));
 
   return { id: loan.id, code: loan.code, borrowerName: loan.borrower_name, borrowerPhone: loan.borrower_phone, borrowerOrganization: loan.borrower_organization, purpose: loan.purpose, loanedAt: loan.loaned_at, expectedReturnOn: loan.expected_return_on, status: getLoanStatus(loan.status, loan.expected_return_on), attentionStatus: getLoanAttentionStatus(loan.expected_return_on), notes: loan.notes, documentationUrl: await getDocumentationUrl(loan.documentation_path), closedAt: loan.closed_at, items: detailItems.filter((item): item is LoanDetailItem => item !== null) };

@@ -7,10 +7,19 @@ import { createLoanSchema, returnLoanItemSchema, type CreateLoanValues, type Ret
 
 type ActionResult = { success: boolean; message: string; loanId?: string };
 
-// Memperbarui cache halaman global, inventory, dan detail peminjaman
+// Memperbarui cache halaman global, inventory, dan seluruh tampilan peminjaman
 function refresh(loanId?: string) {
-  ["/", "/inventory", "/loans"].forEach((path) => revalidatePath(path, "layout"));
-  if (loanId) revalidatePath("/loans/" + loanId);
+  // 1. Invalidate rute layout utama dan spesifik halaman loans
+  ["/", "/inventory", "/loans"].forEach((path) => {
+    revalidatePath(path, "layout");
+    revalidatePath(path, "page");
+  });
+
+  // 2. Jika ada loanId, bersihkan cache halaman detail peminjaman
+  if (loanId) {
+    revalidatePath("/loans/" + loanId, "page");
+    revalidatePath("/loans/" + loanId, "layout");
+  }
 }
 
 async function canMutate(): Promise<ActionResult | null> {
@@ -60,7 +69,9 @@ export async function returnLoanItem(input: ReturnLoanItemValues, loanId: string
     p_documentation_path: parsed.data.documentationPath ?? "",
   });
   
-if (error) return { success: false, message: error.message };
+  if (error) return { success: false, message: error.message };
+  
+  // Bersihkan cache agar daftar di tab pengembalian & daftar aktif langsung terhapus
   refresh(loanId);
   return { success: true, message: "Pengembalian selesai dan stok tersedia telah diperbarui." };
 }
