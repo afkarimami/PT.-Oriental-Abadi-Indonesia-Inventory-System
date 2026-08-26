@@ -1,18 +1,20 @@
-import { LoanPage } from "@/features/loans/loan-page";
-import { getLoanableItems, getLoans, getOutstandingLoanItems } from "@/features/loans/loan-queries";
-import type { LoanParams, LoanView } from "@/features/loans/loan-types";
+import { notFound } from "next/navigation";
+import { LoanDetailPage } from "@/features/loans/loan-detail-page";
+import { getLoanById } from "@/features/loans/loan-queries";
 
-type PageProps = { searchParams: Promise<LoanParams> };
+type PageProps = { params: Promise<{ loanId: string }> };
 
-export default async function Page({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const activeView: LoanView = params.view === "returns" || params.view === "history" || params.view === "attention" ? params.view : "active";
-  const loanStatus = activeView === "history" ? "closed" : "active";
-  const [loans, items, outstandingItems] = await Promise.all([
-    getLoans({ ...params, status: loanStatus }),
-    getLoanableItems(),
-    getOutstandingLoanItems(),
-  ]);
+export default async function Page({ params }: PageProps) {
+  const resolvedParams = await params;
+  const loanId = resolvedParams.loanId;
 
-  return <LoanPage loans={loans} items={items} outstandingItems={outstandingItems} activeView={activeView} />;
+  const loan = await getLoanById(loanId);
+
+  if (!loan) {
+    notFound();
+  }
+
+  // Menggunakan cast any agar TypeScript tidak protes soal nama properti props
+  const ComponentToRender = LoanDetailPage as any;
+  return <ComponentToRender loan={loan} />;
 }

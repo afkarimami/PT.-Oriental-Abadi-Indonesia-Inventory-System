@@ -1,8 +1,26 @@
-import { PageContainer } from "@/components/layout/page-container";
-import { PageTitle } from "@/components/shared/page-title";
-import { LoanDetailView } from "./loan-detail-view";
-import type { LoanDetail } from "./loan-types";
+import { notFound } from "next/navigation";
+import { getLoanById } from "./loan-queries";
+import LoanDetailView from "./loan-detail-view";
 
-export function LoanDetailPage({ loan }: { loan: LoanDetail }) {
-  return <PageContainer><PageTitle eyebrow="Detail serah terima" title={loan.code} description="Periksa alat yang masih dipinjam dan catat pengembaliannya." className="mb-6" /><LoanDetailView loan={loan} /></PageContainer>;
+interface LoanDetailPageProps {
+  params: Promise<{ id?: string; loanId?: string }>;
 }
+
+export async function LoanDetailPage({ params }: LoanDetailPageProps) {
+  const resolvedParams = await params;
+  const id = resolvedParams.loanId || resolvedParams.id;
+
+  if (!id) {
+    notFound();
+  }
+
+  const loan = await getLoanById(id);
+
+  if (!loan) {
+    notFound();
+  }
+
+  return <LoanDetailView loan={loan} />;
+}
+
+export default LoanDetailPage;

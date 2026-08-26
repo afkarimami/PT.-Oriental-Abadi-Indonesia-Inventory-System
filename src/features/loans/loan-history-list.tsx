@@ -1,13 +1,53 @@
-import Link from "next/link";
-import { CheckCircle2, ChevronRight } from "lucide-react";
-import { EmptyState } from "@/components/shared/empty-state";
-import { Badge } from "@/components/ui/badge";
-import type { LoanListRecord } from "./loan-types";
+"use client";
 
-export function LoanHistoryList({ loans }: { loans: LoanListRecord[] }) {
-  if (loans.length === 0) {
-    return <EmptyState title="Belum ada transaksi selesai" description="Transaksi yang seluruh alatnya sudah diproses akan tampil di sini." />;
+import type { LoanRecord } from "./loan-types";
+
+export function LoanHistoryList({ loans }: { loans: LoanRecord[] }) {
+  if (!loans || loans.length === 0) {
+    return (
+      <div className="rounded-lg border p-6 text-center text-sm text-gray-500">
+        Belum ada riwayat peminjaman.
+      </div>
+    );
   }
 
-  return <section className="overflow-hidden rounded-2xl border bg-card"><div className="divide-y">{loans.map((loan) => <Link key={loan.id} href={"/loans/" + loan.id} className="flex items-center gap-4 p-4 transition hover:bg-muted/50"><span className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-emerald-600"><CheckCircle2 className="size-5" /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="font-mono text-xs font-semibold text-primary">{loan.code}</p><Badge variant="secondary">Selesai</Badge></div><p className="mt-1 font-semibold">{loan.borrowerName}</p><p className="text-sm text-muted-foreground">{loan.purpose} - {loan.itemCount} jenis alat sudah diproses</p></div><div className="hidden text-right text-sm sm:block"><p>{loan.closedAt ? "Selesai " + new Date(loan.closedAt).toLocaleDateString("id-ID") : "Selesai"}</p><p className="text-muted-foreground">{loan.borrowerPhone}</p></div><ChevronRight className="size-5 text-muted-foreground" /></Link>)}</div></section>;
+  return (
+    <div className="space-y-4">
+      {loans.map((loan) => (
+        <div key={loan.id} className="rounded-lg border p-4 shadow-sm">
+          <div className="flex items-center justify-between border-b pb-2 mb-3">
+            <div>
+              <p className="font-semibold text-base">{loan.borrowerName}</p>
+              <p className="text-xs text-gray-500">{loan.code} • {loan.borrowerPhone}</p>
+            </div>
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                loan.status === "active"
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-green-100 text-green-800"
+              }`}
+            >
+              {loan.status === "active" ? "Aktif Dipinjam" : "Selesai / Ditutup"}
+            </span>
+          </div>
+
+          <p className="text-xs text-gray-600 mb-2">
+            <span className="font-medium">Keperluan:</span> {loan.purpose}
+          </p>
+
+          <div className="bg-gray-50 rounded p-2 text-xs space-y-1">
+            <p className="font-semibold text-gray-700">Daftar Barang:</p>
+            {loan.items?.map((item) => (
+              <div key={item.id} className="flex justify-between text-gray-600">
+                <span>• {item.itemName} ({item.itemCode})</span>
+                <span>Pinjam: {item.quantityBorrowed} | Kembali: {item.quantityReturned}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
+
+export default LoanHistoryList;

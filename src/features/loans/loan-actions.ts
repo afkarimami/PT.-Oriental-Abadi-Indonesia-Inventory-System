@@ -1,77 +1,115 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCurrentAdmin } from "@/features/auth/auth-queries";
 import { createClient } from "@/lib/supabase/server";
-import { createLoanSchema, returnLoanItemSchema, type CreateLoanValues, type ReturnLoanItemValues } from "./loan-schema";
 
-type ActionResult = { success: boolean; message: string; loanId?: string };
+// 1. Action untuk Membuat Peminjaman Baru
+export async function createLoan(formData: FormData) {
+  const supabase = await createClient();
 
-// Memperbarui cache halaman global, inventory, dan seluruh tampilan peminjaman
-function refresh(loanId?: string) {
-  // 1. Invalidate rute layout utama dan spesifik halaman loans
-  ["/", "/inventory", "/loans"].forEach((path) => {
-    revalidatePath(path, "layout");
-    revalidatePath(path, "page");
-  });
+  const borrowerName = formData.get("borrowerName")?.toString();
+  const borrowerPhone = formData.get("borrowerPhone")?.toString();
+  const borrowerOrganization = formData.get("borrowerOrganization")?.toString() || "";
+  const purpose = formData.get("purpose")?.toString();
+  const expectedReturnOn = formData.get("expectedReturnOn")?.toString() || null;
+  const itemsJson = formData.get("items")?.toString();
 
-  // 2. Jika ada loanId, bersihkan cache halaman detail peminjaman
-  if (loanId) {
-    revalidatePath("/loans/" + loanId, "page");
-    revalidatePath("/loans/" + loanId, "layout");
+  if (!borrowerName || !borrowerPhone || !purpose || !itemsJson) {
+    return { success: false, error: "Mohon lengkapi semua data wajib." };
   }
+
+  let items: { inventoryItemId: string; quantity: number }[] = [];
+  try {
+    items = JSON.parse(itemsJson);
+  } catch {
+    return { success: false, error: "Format data barang tidak valid." };
+  }
+
+  if (items.length === 0) {
+    return { success: false, error: "Pilih minimal satu barang untuk dipinjam." };
+  }
+
+  const { data: loan, error: loanError } = await supabase
+    .from("loans")
+    .insert({
+      borrower_name: borrowerName,
+      borrower_phone: borrowerPhone,
+      borrower_organization: borrowerOrganization,
+      purpose,
+      expected_return_on: expectedReturnOn,
+      status: "active",
+    })
+    .select("id")
+    .single();
+
+  if (loanError || !loan) {
+    return { success: false, error: loanError?.message || "Gagal membuat peminjaman." };
+  }
+
+  const loanItems = items.map((item) => ({
+    loan_id: loan.id,
+    inventory_item_id: item.inventoryItemId,
+    quantity_borrowed: item.quantity,
+    quantity_returned: 0,
+    quantity_damaged: 0,
+    quantity_lost: 0,
+  }));
+
+  const { error: itemsError } = await supabase.from("loan_items").insert(loanItems);
+
+  if (itemsError) {
+    return { success: false, error: itemsError.message };
+  }
+
+  revalidatePath("/loans");
+  revalidatePath("/inventory");
+
+  return { success: true };
 }
 
-async function canMutate(): Promise<ActionResult | null> {
-  const admin = await getCurrentAdmin();
-  return admin?.isActive ? null : { success: false, message: "Akun Anda tidak aktif atau sesi telah berakhir." };
-}
-
-export async function createLoan(input: CreateLoanValues): Promise<ActionResult> {
-  const permission = await canMutate();
-  if (permission) return permission;
-  
-  const parsed = createLoanSchema.safeParse(input);
-  if (!parsed.success) return { success: false, message: parsed.error.issues[0]?.message ?? "Data peminjaman tidak valid." };
-
+// 2. Action untuk Pengembalian Barang
+export async function returnLoanItem(formData: FormData) {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("create_loan", {
-    p_borrower_name: parsed.data.borrowerName,
-    p_borrower_phone: parsed.data.borrowerPhone,
-    p_borrower_organization: parsed.data.borrowerOrganization ?? "",
-    p_purpose: parsed.data.purpose,
-    p_expected_return_on: parsed.data.expectedReturnOn || null,
-    p_notes: parsed.data.notes ?? "",
-    p_documentation_path: parsed.data.documentationPath ?? "",
-    p_items: parsed.data.items.map((item) => ({ inventory_item_id: item.inventoryItemId, quantity: item.quantity })),
-  });
-  
-  if (error) return { success: false, message: error.message.includes("Stok") ? error.message : "Peminjaman gagal dicatat. Periksa kembali data dan stok barang." };
 
-  refresh(data);
-  return { success: true, message: "Peminjaman berhasil dicatat dan stok barang diperbarui.", loanId: data };
-}
+  const loanItemId = formData.get("loanItemId")?.toString();
+  const quantityGood = Number(formData.get("quantityGood") || 0);
+  const quantityDamaged = Number(formData.get("quantityDamaged") || 0);
+  const quantityLost = Number(formData.get("quantityLost") || 0);
+  const notes = formData.get("notes")?.toString() || "";
 
-export async function returnLoanItem(input: ReturnLoanItemValues, loanId: string): Promise<ActionResult> {
-  const permission = await canMutate();
-  if (permission) return permission;
-  
-  const parsed = returnLoanItemSchema.safeParse(input);
-  if (!parsed.success) return { success: false, message: parsed.error.issues[0]?.message ?? "Data pengembalian tidak valid." };
+  if (!loanItemId) {
+    return { success: false, error: "ID Item Peminjaman tidak valid." };
+  }
 
-  const supabase = await createClient();
   const { error } = await supabase.rpc("return_loan_item", {
-    p_loan_item_id: parsed.data.loanItemId,
-    p_quantity_good: parsed.data.quantityGood,
-    p_quantity_damaged: parsed.data.quantityDamaged,
-    p_quantity_lost: parsed.data.quantityLost,
-    p_notes: parsed.data.notes ?? "",
-    p_documentation_path: parsed.data.documentationPath ?? "",
+    p_loan_item_id: loanItemId,
+    p_quantity_good: quantityGood,
+    p_quantity_damaged: quantityDamaged,
+    p_quantity_lost: quantityLost,
+    p_notes: notes,
   });
-  
-  if (error) return { success: false, message: error.message };
-  
-  // Bersihkan cache agar daftar di tab pengembalian & daftar aktif langsung terhapus
-  refresh(loanId);
-  return { success: true, message: "Pengembalian selesai dan stok tersedia telah diperbarui." };
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  const { data: itemData } = await supabase
+    .from("loan_items")
+    .select("loan_id")
+    .eq("id", loanItemId)
+    .single();
+
+  if (itemData?.loan_id) {
+    await supabase
+      .from("loans")
+      .update({ status: "closed", closed_at: new Date().toISOString() })
+      .eq("id", itemData.loan_id);
+  }
+
+  revalidatePath("/loans");
+  revalidatePath("/inventory");
+
+  return { success: true };
 }
+
+export const returnLoanItemAction = returnLoanItem;

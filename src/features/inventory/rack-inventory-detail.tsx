@@ -21,7 +21,7 @@ const itemTypeLabel = {
 };
 
 function quantity(value: number | null) {
-  return value === null ? "0" : value.toLocaleString("id-ID");
+  return value === null ? "Belum dicatat" : value.toLocaleString("id-ID");
 }
 
 export function RackInventoryDetail({ rack, records, pagination }: RackInventoryDetailProps) {
@@ -94,7 +94,6 @@ export function RackInventoryDetail({ rack, records, pagination }: RackInventory
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-<<<<<<< HEAD
             {records.map((record) => (
               <article key={record.id} className="rounded-2xl border bg-card p-5 shadow-[0_8px_24px_rgba(28,36,52,0.04)]">
                 <div className="flex items-start justify-between gap-3">
@@ -108,7 +107,6 @@ export function RackInventoryDetail({ rack, records, pagination }: RackInventory
                   </span>
                 </div>
 
-                {/* Perubahan: Hanya menampilkan box Stok */}
                 <div className="mt-5">
                   <div className="rounded-xl bg-muted/60 p-3">
                     <p className="text-xs text-muted-foreground">Stok</p>
@@ -116,40 +114,15 @@ export function RackInventoryDetail({ rack, records, pagination }: RackInventory
                   </div>
                 </div>
 
-                {(record.usedQuantity !== null || record.addedQuantity !== null) && <p className="mt-3 text-xs text-muted-foreground">Pakai: {quantity(record.usedQuantity)} - Tambah: {quantity(record.addedQuantity)}</p>}
-                <div className="mt-4 flex items-center gap-2 border-t pt-3 text-xs text-muted-foreground"><Package className="size-3.5" />Rak {record.rack.code}</div>
+                {(record.usedQuantity !== null || record.addedQuantity !== null) && (
+                  <p className="mt-3 text-xs text-muted-foreground">Pakai: {quantity(record.usedQuantity)} - Tambah: {quantity(record.addedQuantity)}</p>
+                )}
+                <div className="mt-4 flex items-center gap-2 border-t pt-3 text-xs text-muted-foreground">
+                  <Package className="size-3.5" />
+                  Rak {record.rack.code}
+                </div>
               </article>
             ))}
-=======
-            {records.map((record) => {
-              const currentStock = record.currentQuantity ?? 0;
-
-              return (
-                <article key={record.id} className="rounded-2xl border bg-card p-5 shadow-[0_8px_24px_rgba(28,36,52,0.04)]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-mono text-xs font-semibold text-primary">{record.code}</p>
-                      <h3 className="mt-2 text-base font-bold">{record.name}</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">{itemTypeLabel[record.itemType]}</p>
-                    </div>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${currentStock > 0 ? "bg-emerald-50 text-emerald-800" : "bg-destructive/10 text-destructive"}`}>
-                      {currentStock > 0 ? "Tersedia" : "Stok Habis"}
-                    </span>
-                  </div>
-
-                  {/* TAMPILAN BARU: HANYA MENAMPILKAN SATU INDIKATOR STOK YANG ADIR DAN JELAS */}
-                  <div className="mt-5 rounded-xl bg-muted/60 p-4">
-                    <p className="text-xs text-muted-foreground">Stok Barang</p>
-                    <p className="mt-1 text-2xl font-bold text-foreground">{quantity(currentStock)} <span className="text-xs font-normal text-muted-foreground">unit</span></p>
-                  </div>
-
-                  <div className="mt-4 flex items-center gap-2 border-t pt-3 text-xs text-muted-foreground">
-                    <Package className="size-3.5" />
-                    Rak {record.rack.code}
-                  </div>
-                </article>
-              );
-            })}
           </div>
 
           <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
@@ -159,7 +132,6 @@ export function RackInventoryDetail({ rack, records, pagination }: RackInventory
               <span>Halaman {pagination.page} dari {totalPages}</span>
               <Button type="button" variant="outline" size="sm" disabled={pagination.page >= totalPages || pagination.total === 0} onClick={() => changePage(pagination.page + 1)}>Berikutnya</Button>
             </div>
->>>>>>> e749d62c9c3ef065d776fbb490374c597eb26b1c
           </div>
         </>
       )}
