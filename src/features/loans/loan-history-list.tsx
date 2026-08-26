@@ -13,7 +13,7 @@ export function LoanHistoryList({ loans }: { loans: LoanRecord[] }) {
 
   return (
     <div className="space-y-4">
-      {loans.map((loan) => (
+      {loans.map((loan: any) => (
         <div key={loan.id} className="rounded-lg border p-4 shadow-sm">
           <div className="flex items-center justify-between border-b pb-2 mb-3">
             <div>
@@ -37,7 +37,7 @@ export function LoanHistoryList({ loans }: { loans: LoanRecord[] }) {
 
           <div className="bg-gray-50 rounded p-2 text-xs space-y-1">
             <p className="font-semibold text-gray-700">Daftar Barang:</p>
-            {loan.items?.map((item) => (
+            {loan.items?.map((item: any) => (
               <div key={item.id} className="flex justify-between text-gray-600">
                 <span>• {item.itemName} ({item.itemCode})</span>
                 <span>Pinjam: {item.quantityBorrowed} | Kembali: {item.quantityReturned}</span>

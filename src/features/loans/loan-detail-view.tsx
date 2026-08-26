@@ -42,7 +42,7 @@ export default function LoanDetailView({ loan }: { loan: LoanRecord }) {
       <div className="rounded-lg border p-4">
         <h2 className="mb-4 font-semibold">Alat dalam transaksi</h2>
         <div className="space-y-4">
-          {loan.items.map((item) => {
+          {loan?.items?.map((item: any) => {
             const outstanding =
               item.quantityBorrowed -
               (item.quantityReturned + item.quantityDamaged + item.quantityLost);
@@ -76,12 +76,14 @@ export default function LoanDetailView({ loan }: { loan: LoanRecord }) {
         </div>
       </div>
 
-      {/* Modal Dialog Pengembalian Standard HTML */}
+      {/* Modal Dialog Pengembalian */}
       {selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold">Pengembalian {selectedItem.itemName}</h3>
+              <h3 className="text-lg font-bold">
+                Pengembalian {selectedItem.itemName}
+              </h3>
               <button
                 type="button"
                 onClick={() => setSelectedItem(null)}

@@ -25,8 +25,8 @@ export function LoanList({ loans, items, attentionMode = false }: LoanListProps)
   const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const activeCount = loans.length;
-  const overdueCount = loans.filter((loan) => loan.status === "overdue").length;
-  const borrowedQuantity = loans.reduce((total, loan) => total + loan.outstandingQuantity, 0);
+  const overdueCount = loans.filter((loan: any) => loan.status === "overdue").length;
+  const borrowedQuantity = loans.reduce((total: number, loan: any) => total + loan.outstandingQuantity, 0);
 
   const updateParams = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -61,7 +61,7 @@ export function LoanList({ loans, items, attentionMode = false }: LoanListProps)
           {loans.length === 0 ? (
             <p className="p-8 text-center text-sm text-muted-foreground">Belum ada transaksi aktif. Buat peminjaman baru saat alat diserahkan.</p>
           ) : (
-            loans.map((loan) => (
+            loans.map((loan: any) => (
               <Link key={loan.id} href={"/loans/" + loan.id} className="flex items-center gap-4 p-4 transition hover:bg-muted/50">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -117,7 +117,7 @@ function LoanForm({ items, onSuccess }: { items: LoanableItem[]; onSuccess: (loa
   const [isPending, setIsPending] = useState(false);
   const selectedItemIds = new Set(loanItems.map((item) => item.inventoryItemId));
   const searchResults = itemSearch.trim()
-    ? items.filter((item) => !selectedItemIds.has(item.id) && (item.name + " " + item.code + " " + item.rackCode).toLowerCase().includes(itemSearch.toLowerCase())).slice(0, 8)
+    ? items.filter((item: any) => !selectedItemIds.has(item.id) && (item.name + " " + item.code + " " + item.rackCode).toLowerCase().includes(itemSearch.toLowerCase())).slice(0, 8)
     : [];
 
   const addItem = (item: LoanableItem) => {
@@ -131,9 +131,20 @@ function LoanForm({ items, onSuccess }: { items: LoanableItem[]; onSuccess: (loa
     setIsPending(true);
     try {
       const documentationPath = file ? await uploadLoanDocumentation(file) : undefined;
-      const result = await createLoan({ borrowerName, borrowerPhone, borrowerOrganization, purpose, expectedReturnOn, notes, documentationPath, items: loanItems });
-      if (!result.success || !result.loanId) return toast.error(result.message);
-      toast.success(result.message);
+      
+      const formData = new FormData();
+      formData.append("borrowerName", borrowerName);
+      formData.append("borrowerPhone", borrowerPhone);
+      if (borrowerOrganization) formData.append("borrowerOrganization", borrowerOrganization);
+      formData.append("purpose", purpose);
+      if (expectedReturnOn) formData.append("expectedReturnOn", expectedReturnOn);
+      if (notes) formData.append("notes", notes);
+      if (documentationPath) formData.append("documentationPath", documentationPath);
+      formData.append("items", JSON.stringify(loanItems));
+
+      const result: any = await createLoan(formData as any);
+      if (!result.success || !result.loanId) return toast.error(result.message || "Gagal membuat peminjaman");
+      toast.success(result.message || "Peminjaman berhasil dibuat");
       onSuccess(result.loanId);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Peminjaman gagal dicatat.");
@@ -168,7 +179,7 @@ function LoanForm({ items, onSuccess }: { items: LoanableItem[]; onSuccess: (loa
               {searchResults.length === 0 ? (
                 <p className="px-3 py-3 text-sm text-muted-foreground">Barang tidak ditemukan atau sudah dipilih.</p>
               ) : (
-                searchResults.map((item) => (
+                searchResults.map((item: any) => (
                   <button key={item.id} type="button" onClick={() => addItem(item)} className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left text-sm hover:bg-muted">
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{item.name}</span>
@@ -183,13 +194,12 @@ function LoanForm({ items, onSuccess }: { items: LoanableItem[]; onSuccess: (loa
         </div>
       </Field>
 
-      {/* Bagian Item Peminjaman dengan Input yang Sudah Diperbaiki */}
       <div className="grid gap-2">
         {loanItems.length === 0 ? (
           <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">Belum ada barang dipilih. Gunakan pencarian di atas.</p>
         ) : (
           loanItems.map((row) => {
-            const item = items.find((candidate) => candidate.id === row.inventoryItemId);
+            const item = items.find((candidate: any) => candidate.id === row.inventoryItemId);
             if (!item) return null;
             return (
               <div key={row.inventoryItemId} className="flex items-center justify-between gap-2 rounded-xl border p-3">
@@ -200,7 +210,6 @@ function LoanForm({ items, onSuccess }: { items: LoanableItem[]; onSuccess: (loa
                   </p>
                 </div>
 
-                {/* Kontrol Kuantitas HP-Friendly */}
                 <div className="flex items-center gap-1 rounded-xl border bg-background p-1">
                   <Button
                     type="button"
@@ -220,7 +229,6 @@ function LoanForm({ items, onSuccess }: { items: LoanableItem[]; onSuccess: (loa
                     -
                   </Button>
                   
-                  {/* Input Angka Diperbaiki: type="text" & inputMode="numeric" */}
                   <input
                     type="text"
                     inputMode="numeric"
