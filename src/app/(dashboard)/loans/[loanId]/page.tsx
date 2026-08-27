@@ -1,11 +1,21 @@
-import LoanDetailPage from "@/features/loans/loan-detail-page";
-import type { LoanParams } from "@/features/loans/loan-types";
+import { notFound } from "next/navigation";
+import { LoanDetailPage } from "@/features/loans/loan-detail-page";
+import { getLoanById } from "@/features/loans/loan-queries";
+
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ loanId: string }>;
-  searchParams?: Promise<LoanParams>;
 };
 
-export default function Page({ params }: PageProps) {
-  return <LoanDetailPage params={params} />;
+export default async function Page({ params }: PageProps) {
+  const { loanId } = await params;
+  const loan = await getLoanById(loanId);
+
+  if (!loan) {
+    notFound();
+  }
+
+  const ComponentToRender = LoanDetailPage as any;
+  return <ComponentToRender loan={loan} />;
 }
