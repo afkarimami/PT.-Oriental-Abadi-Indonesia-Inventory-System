@@ -6,7 +6,7 @@ export function LoanHistoryList({ loans }: { loans: LoanRecord[] }) {
   if (!loans || loans.length === 0) {
     return (
       <div className="rounded-lg border p-6 text-center text-sm text-gray-500">
-        Belum ada riwayat peminjaman.
+        Belum ada riwayat peminjaman barang.
       </div>
     );
   }
