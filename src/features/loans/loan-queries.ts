@@ -1,12 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Mengambil konfigurasi Supabase dari file .env.local
+// Mengambil konfigurasi Supabase dari environment variable
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-
+// Gunakan ANON_KEY (standar Supabase) atau samakan dengan nama di .env Anda
 const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "";
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Cek apakah key tersedia sebelum inisialisasi untuk mencegah crash saat build
+export const supabase = 
+  supabaseUrl && supabaseKey 
+    ? createClient(supabaseUrl, supabaseKey) 
+    : (null as unknown as ReturnType<typeof createClient>);
 
 export async function getLoans() {
   const { data, error } = await supabase
